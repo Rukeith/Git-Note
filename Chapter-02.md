@@ -25,4 +25,87 @@
 
 ![The lifecycle of the status of your files.](lifecycle.png)
 
-### Checking the 
+### Checking the Status of Your Files
+使用`git status`可以知道每個檔案是屬於哪種狀態。如果是在 clone 之後執行此指令，你應該會看到以下：
+
+	$ git status
+	On branch master
+	nothing to commit, working directory clean
+	
+Wokring directory clean 意味著目前的工作目錄沒有未被追蹤或已被修改的檔案。這個指令告訴使用者在哪一個 branch 上。
+
+### Tracking New Files
+要追蹤新增的檔案，我們可以使用`git add`。例如：  
+`$ git add README`
+
+之後將可看到 README 檔案被列入追蹤且被暫存(tracked and staged to be commited)：
+
+	$ git status
+	On branch master
+	Changes to be committed:
+	  (use "git reset HEAD &lt;file&gt;..." to unstage)
+	
+	    new file:   README
+
+因為它被放在 Changes to be commited 下方，可得知已被暫存起來。若此時提交更新，剛才執行`git add`加進來的檔案就會被記錄在歷史的 snapshot。可回想一下先前執行`git init`後也有執行過`git add`，開始追蹤目錄內的檔案。`git add`命令可接受檔名或者目錄名。 若是目錄名，Git 會以遞迴(recursive)的方式會將整個目錄下所有檔案及子目錄都加進來。
+
+### Staging Modified Files
+若是修改先前已被追蹤的檔案，名為`benchmarks.rb`。並且檢查狀態，會看到類似以下文字：
+
+	$ git status
+	On branch master
+	Changes to be committed:
+	  (use "git reset HEAD <file>..." to unstage)
+	
+	        new file:   README
+	
+	Changes not staged for commit:
+	  (use "git add <file>..." to update what will be committed)
+	  (use "git checkout -- <file>..." to discard changes in working directory)
+	
+	        modified:   benchmarks.rb
+
+這兩個檔案目前都被暫存起來，而且會進入下一次的提交。 假設仍需要對 benchmarks.rb 做一點修改後才要提交，可再度開啟並編輯該檔案。然而，當我們再度執行git status：
+
+	$ vim benchmarks.rb
+	$ git status
+	On branch master
+	Changes to be committed:
+	  (use "git reset HEAD <file>..." to unstage)
+	
+	        new file:   README
+	        modified:   benchmarks.rb
+	
+	Changes not staged for commit:
+	  (use "git add <file>..." to update what will be committed)
+	  (use "git checkout -- <file>..." to discard changes in working directory)
+	
+	        modified:   benchmarks.rb
+
+現在 benchmarks.rb 同時被列在 staged 及 unstaged。這表示 Git 的確在讀者執行`git add`命令後，將檔案暫存起來。若現在提交更新，最近一次執行`git add`命令時暫存的`benchmarks.rb`會被提交。若在`git add`後修改檔案，需要再度執行`git add`將最新版的檔案暫存起來：
+
+	$ git add benchmarks.rb
+	$ git status
+	On branch master
+	Changes to be committed:
+	  (use "git reset HEAD <file>..." to unstage)
+	
+	        new file:   README
+	        modified:   benchmarks.rb
+
+### Short Status
+Git 提供簡短的狀態標籤，可以用更簡短的方式來查看狀態。行`git status -s`或`git status --short`
+
+	$ git status -s
+	 M README
+	MM Rakefile
+	A  lib/git.rb
+	M  lib/simplegit.rb
+	?? LICENSE.txt
+
+* `??`：untracked
+* `A`：staged
+* `M`：modified and staged
+* `MM`：modified, staged and then modified again
+
+### Ignoring Files
