@@ -463,3 +463,159 @@ Git 並不像其他檔案控制系統一樣，明確地追蹤檔案的移動。�
 ## Tag
 Git具備在特定時間點加入標籤去註明其重要性的功能。
 
+### 列出 Tag
+在 Git 中列出既有的 tag，可使用`git tag`，會以字母排序列出：
+
+	$ git tag
+	v0.1
+	v1.3
+
+可以針對特定的字串規則去搜尋 tag。例如只會 1.4.2 的 tag 感興趣，可以使用`-l`
+
+	$ git tag -l 'v1.4.2.*'
+	v1.4.2.1
+	v1.4.2.2
+	v1.4.2.3
+	v1.4.2.4
+
+### 建立 Tag
+Git 使用兩大類的標籤：輕量級(lightweight)和含附註(annotated)。輕量級標籤就像是**沒有更動的分支**，實際上它僅是指到特定 commit 的指標。然而，含附註的標籤則是實際存在 Git 資料庫上的完整物件。它具備檢查碼、e-mail 和日期，也包含標籤訊息，並可以被GNU Privacy Guard (GPG)簽署和驗證。一般而言，我們都建議使用含附註的標籤以便保留相關訊息；但如果只是臨時加註標籤或不需要保留其他訊息，就是使用輕量級標籤的時機。
+
+### 含附註 Tag
+建立一個含附註的標籤很簡單。最容易的方法是加入`-a`到`tag`指令上：
+
+	$ git tag -a v1.4 -m 'my version 1.4'
+	$ git tag
+	v0.1
+	v1.3
+	v1.4
+
+`-m`選項用來設定標籤訊息。如果你沒有設定該訊息，Git 會啟動文字編輯器讓你輸入。
+透過`git show`可看到指定標籤的資料與對應的 commit。
+
+	$ git show v1.4
+	tag v1.4
+	Tagger: Scott Chacon <schacon@gee-mail.com>
+	Date:   Mon Feb 9 14:45:11 2009 -0800
+	
+	my version 1.4
+	
+	commit 15027957951b64cf874c3557a0f3547bd83b3ff6
+	Merge: 4a447f7... a6b4c97...
+	Author: Scott Chacon <schacon@gee-mail.com>
+	Date:   Sun Feb 8 19:02:46 2009 -0800
+	
+	    Merge branch 'experiment'
+	    
+### 簽署 Tag
+假設你有私鑰(private key)，你也可以用GPG簽署在標籤上。只要用`-s`取代`-a`：
+
+	$ git tag -s v1.5 -m 'my signed 1.5 tag'
+	You need a passphrase to unlock the secret key for
+	user: "Scott Chacon <schacon@gee-mail.com>"
+	1024-bit DSA key, ID F721C45A, created 2009-02-09
+
+### 輕量級 Tag
+基本上就是只保存 commit 檢查碼的文件。要建立這樣的標籤，不必下任何選項，直接設定標籤名稱即可。
+
+	$ git tag v1.4-lw
+	$ git tag
+	v0.1
+	v1.3
+	v1.4
+	v1.4-lw
+	v1.5
+
+### 驗證 Tag
+想要驗證已簽署的標籤，需要使用`git tag -v [tag-name]`。這個指令透過 GPG 去驗證簽章。而且在你的 keyring 中需要有簽署者的公鑰才能進行驗證：
+
+	$ git tag -v v1.4.2.1
+	object 883653babd8ee7ea23e6a5c392bb739348b1eb61
+	type commit
+	tag v1.4.2.1
+	tagger Junio C Hamano <junkio@cox.net> 1158138501 -0700
+	
+	GIT 1.4.2.1
+	
+	Minor fixes since 1.4.2, including git-mv and git-http with alternates.
+	gpg: Signature made Wed Sep 13 02:08:25 2006 PDT using DSA key ID F3119B9A
+	gpg: Good signature from "Junio C Hamano <junkio@cox.net>"
+	gpg:                 aka "[jpeg image of size 1513]"
+	Primary key fingerprint: 3565 2A26 2040 E066 C9A7  4A7D C0C6 D9A4 F311 9B9A
+
+如果沒有簽署者的公鑰，則會看到下列訊息：
+
+	gpg: Signature made Wed Sep 13 02:08:25 2006 PDT using DSA key ID F3119B9A
+	gpg: Can't check signature: public key not found
+	error: could not verify the tag 'v1.4.2.1'
+
+### 追加 Tag
+你也可以對過去的commit上加入標籤。假設你的commit歷史如下：
+
+	$ git log --pretty=oneline
+	15027957951b64cf874c3557a0f3547bd83b3ff6 Merge branch 'experiment'
+	a6b4c97498bd301d84096da251c98a07c7723e65 beginning write support
+	0d52aaab4479697da7686c15f77a3d64d9165190 one more thing
+	6d52a271eda8725415634dd79daabbc4d9b6008e Merge branch 'experiment'
+	0b7434d86859cc7b8c3d5e1dddfed66ff742fcbc added a commit function
+	4682c3261057305bdd616e23b64b0857d832627b added a todo file
+	166ae0c4d3f420721acbb115cc33848dfcc2121a started write support
+	9fceb02d0ae598e95dc970b74767f19372d61af8 updated rakefile
+	964f16d36dfccde844893cac5b347e7b3d44abbc commit the todo
+	8a5cbc430f1a9c3d00faaeffd07798508422908a updated readme
+
+如果你之前忘了將 "updated rakefile" 這個 commit 加入 v1.2 標籤。仍然可在事後設定。要完成這個動作，你必須加入該次 commit 的檢查碼(或前幾碼即可)到以下指令：  
+`$ git tag -a v1.2 9fceb02`
+
+你可以看到標籤已經補上：
+
+	$ git tag
+	v0.1
+	v1.2
+	v1.3
+	v1.4
+	v1.4-lw
+	v1.5
+	
+	$ git show v1.2
+	tag v1.2
+	Tagger: Scott Chacon <schacon@gee-mail.com>
+	Date:   Mon Feb 9 15:32:16 2009 -0800
+	
+	version 1.2
+	commit 9fceb02d0ae598e95dc970b74767f19372d61af8
+	Author: Magnus Chacon <mchacon@gee-mail.com>
+	Date:   Sun Apr 27 20:43:35 2008 -0700
+	
+	    updated rakefile
+	...
+
+### 分享 Tag
+在預設的情況下，`git push`指令並不會將標籤傳到遠端伺服器上。當建立新標籤後，你必須特別下指令才會將它推送到遠端儲存庫上。類似將分支推送到遠端的過程，透過`git push origin [tagname]`指令。
+
+	$ git push origin v1.5
+	Counting objects: 50, done.
+	Compressing objects: 100% (38/38), done.
+	Writing objects: 100% (44/44), 4.56 KiB, done.
+	Total 44 (delta 18), reused 8 (delta 1)
+	To git@github.com:schacon/simplegit.git
+	* [new tag]         v1.5 -> v1.5
+
+若有許多 tag 要一次 push，可以加入`--tags`。當其他使用者clone或pull你的儲存庫時，他們也同時會取得所有你的標籤。
+
+### 切換 Tag
+You can’t really check out a tag in Git, since they can’t be moved around. If you want to put a version of your repository in your working directory that looks like a specific tag, you can create a new branch at a specific tag with `git checkout -b [branchname] [tagname]`:
+
+	$ git checkout -b version2 v2.0.0
+	Switched to a new branch 'version2'
+
+Of course if you do this and do a commit, your `version2` branch will be slightly different than your `v2.0.0` tag since it will move forward with your new changes, so do be careful.
+
+## Git alias
+	$ git config --global alias.co checkout
+	$ git config --global alias.br branch
+	$ git config --global alias.ci commit
+	$ git config --global alias.st status
+
+某些情況下，會想要執行外部的命令，在要執行的命令前加上`!`。  
+`$ git config --global alias.visual '!gitk'`
