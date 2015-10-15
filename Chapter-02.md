@@ -3,7 +3,7 @@
 可使用兩種方式取得 Git Repository
 
 * 將現有的專案或者目錄匯入 Git
-若要開始使用 Git 追蹤現有的專案，只需要進入該專案的目錄並執行：  
+若要開始使用 Git 追蹤現有的專案，只需要進入該專案的目錄並執行：  q
 `$ git init`
 
 此指令會建立名為`.git`的子目錄，該目錄包含一個 Git Repository 必要的所有檔案。目前來說，專案內任何檔案都還沒有被追蹤。使用者能以少數的`git add`命令指定要追蹤的檔案，並提交：
@@ -295,3 +295,171 @@ Git 並不像其他檔案控制系統一樣，明確地追蹤檔案的移動。�
 |`--committer`|列出提交者名稱符合指定字串的更新。|
 |`--grep`|列出以關鍵字搜尋提交的訊息(若要對比多個字串，需加上`--all-match`，否則只會列出符合任一條件的更新)|
 |`-S`|Only show commits adding or removing code matching the string|
+
+## 復原
+### 更動最後一筆 commit
+最常見的復原發生在太早提交更新，也許忘了加入某些檔案、或者搞砸了提交的訊息。 若想要試著重新提交，可試著加上`--amend`選項：  
+`$ git commit --amend`
+
+此命令取出 stage area 資料並用來做本次的提交。只要在最後一次提交後沒有做過任何修改（例如：在上一次提交後，馬上執行此命令），那麼整個 snapshot 看起來會與上次提交的一模一樣，唯一有更動的是提交時的訊息。使用者可像往常一樣編輯這些訊息，差別在於它們會覆蓋上一次提交。
+
+如下例，若提交了更新後發現忘了一併提交某些檔案，可執行最後一個命令：
+
+	$ git commit -m 'initial commit'
+	$ git add forgotten_file
+	$ git commit --amend
+
+### 取消已被暫存的檔案
+修改兩個檔案，並想要以兩個不同的更新提交它們，不過不小心執行`git add *`將它們同時都加入暫存區。 應該如何將其中一個移出暫存區？`git status`命令已附上相關的提示：
+
+	$ git add .
+	$ git status
+	On branch master
+	Changes to be committed:
+	  (use "git reset HEAD <file>..." to unstage)
+	
+	        modified:   README.txt
+	        modified:   benchmarks.rb
+
+在 “Changes to be commited” 文字下方，註明著使用 `“git reset HEAD <file>...，將 file 移出暫存區”`。 因此，讓我們依循該建議將`benchmarks.rb`檔案移出暫存區：
+
+	$ git reset HEAD benchmarks.rb
+	Unstaged changes after reset:
+	M       benchmarks.rb
+
+>`git reset`如果你使用了`--hard`，則可能是相當危險的命令，則可能會更動到全部的工作目錄。
+
+### 復原已被更動的檔案
+如何做才能很容易的復原為最後一次提交的狀態（或者最初複製儲存庫時、或放到工作目錄時的版本）  
+`git checkout -- <file>`
+
+> 需要特別注意的是，在 Git 中的提交都是可以復原的。即使是分支中的 commit 被刪除或被`--amend`複寫，只有未被提交的則幾乎無法救回。
+
+## Working with Remotes
+### 與遠端協同工作
+想要在任何Git控管的專案協同作業，需要瞭解如何管理遠端的儲存庫。 遠端儲存庫是置放在網際網路或網路其它地方中的專案版本。 讀者可設定多個遠端儲存庫，具備唯讀或可讀寫的權限。 與他人協同作業時，需要管理這些遠端儲存庫，並在需要分享工作時上傳或下載資料。 管理遠端儲存庫包含瞭解如何新增遠端儲存庫、移除已失效的儲存庫、管理許多分支及定義是否要追蹤它們等等。 本節包含如何遠端管理的技巧。
+
+### Showing Your Remotes
+如果想要知道目前所有的 remote repository，可執行`git remote`命令。它會列出當初加入 remote repository 時指定的名稱。若目前所在 repository 是從其它 repository 複製過來的，至少應該看到 origin，也就是 Git 複製儲存庫時預設名字：
+
+	$ git clone git://github.com/schacon/ticgit.git
+	Cloning into 'ticgit'...
+	remote: Reusing existing pack: 1857, done.
+	remote: Total 1857 (delta 0), reused 0 (delta 0)
+	Receiving objects: 100% (1857/1857), 374.35 KiB | 193.00 KiB/s, done.
+	Resolving deltas: 100% (772/772), done.
+	Checking connectivity... done.
+	$ cd ticgit
+	$ git remote
+	origin
+
+
+再加上`-v`參數，將會在名稱後方顯示其URL：
+
+	$ git remote -v
+	origin  git://github.com/schacon/ticgit.git (fetch)
+	origin  git://github.com/schacon/ticgit.git (push)
+
+若有一個以上遠端儲存庫，此命令會全部列出：
+ 
+	$ git remote -v
+	bakkdoor  git://github.com/bakkdoor/grit.git
+	cho45     git://github.com/cho45/grit.git
+	defunkt   git://github.com/defunkt/grit.git
+	koke      git://github.com/koke/grit.git
+	origin    git@github.com:mojombo/grit.git
+
+### Adding Remote Repositories
+欲新增遠端儲存庫並取一個簡短的名字，執行`git remote add [shortname] [url]`：
+
+	$ git remote
+	origin
+	$ git remote add pb git://github.com/paulboone/ticgit.git
+	$ git remote -v
+	origin  git://github.com/schacon/ticgit.git
+	pb  git://github.com/paulboone/ticgit.git
+
+現在可看到命令列中的`pb`字串取代了整個 URL。 例如，若想取得 Paul 上傳的且本地端儲存庫沒有的更新，可執行`git fetch pb`：
+
+	$ git fetch pb
+	remote: Counting objects: 58, done.
+	remote: Compressing objects: 100% (41/41), done.
+	remote: Total 44 (delta 24), reused 1 (delta 0)
+	Unpacking objects: 100% (44/44), done.
+	From git://github.com/paulboone/ticgit
+	 * [new branch]      master     -> pb/master
+	 * [new branch]      ticgit     -> pb/ticgit
+
+現在可在本地端使用`pb/master`存取 Paul 的 master 分支。 
+
+### Fetching and Pulling from Your Remotes
+欲從遠端擷取資料，可執行：  
+`$ git fetch [remote-name]`
+
+此命令到該遠端專案將所有本地端沒有的資料拉下來。若複製了一個儲存庫，會自動將該遠端儲存庫命令為 *origin*。 因此`git fetch origin`取出所有在複製或最後一下擷取後被上傳到該儲存庫的更新。 需留意的是`fetch`命令僅僅將資料拉到本地端的儲存庫，並未自動將它合併進來，也沒有修改任何目前工作的項目。 使用者得在必要時將它們手動合併進來。
+
+若使用者設定一個會追蹤遠端分支的分支，可使用`git pull`命令自動擷取及合併遠端分支到目錄的分支。這或許是較合適的工作流程。而且`git clone`命令預設情況下會自動設定本地端的 master 分支追蹤被複製的遠端儲存庫的 master 分支。（假設該儲存庫有 master 分支）執行`git pull`一般來說會從當初複製時的來源儲存庫擷取資料並自動試著合併到目前工作的版本。
+
+### Pushing to Your Remotes
+`git push [remote-name] [branch-name]`
+
+若想要上傳 master 分支到 origin 伺服器
+`$ git push origin master`
+
+此命令只有在被複製的伺服器開放寫入權限給使用者，而且同一時間內沒有其它人在上傳。 若讀者在其它同樣複製該伺服器的使用者上傳一些更新後上傳到上游，該上傳動作將會被拒絕。 讀者必須先將其它使用者上傳的資料拉下來並整合進來後才能上傳。 
+
+### Inspecting a Remote
+若讀者想取得遠端儲存庫某部份更詳盡的資料，可執行`git remote show [remote-name]`。若執行此命令時加上特定的遠端名字，比如說：`origin`。 會看到類似以下輸出：
+
+	$ git remote show origin
+	* remote origin
+	  URL: git://github.com/schacon/ticgit.git
+	  Remote branch merged with 'git pull' while on branch master
+	    master
+	  Tracked remote branches
+	    master
+	    ticgit
+
+它將同時列出遠端儲存庫的 URL 位置和追蹤分支資訊。特別是告訴你如果你在 master 分支時用`git pull`時，會去自動抓取數據合併到本地的 master 分支。它也列出所有曾經被抓取過的遠端分支。
+
+	$ git remote show origin
+	* remote origin
+	  URL: git@github.com:defunkt/github.git
+	  Remote branch merged with 'git pull' while on branch issues
+	    issues
+	  Remote branch merged with 'git pull' while on branch master
+	    master
+	  New remote branches (next fetch will store in remotes/origin)
+	    caching
+	  Stale tracking branches (use 'git remote prune')
+	    libwalker
+	    walker2
+	  Tracked remote branches
+	    acl
+	    apiv2
+	    dashboard2
+	    issues
+	    master
+	    postgres
+	  Local branch pushed with 'git push'
+	    master:master
+
+這個指令顯示當你執行`git push`會自動推送的哪個分支(最後兩行)。它也顯示哪些遠端分支還沒被同步到本地端(在這個例子是caching)，哪些已同步到本地的遠端分支在遠端已被刪除(libwalker和walker2)，以及當執行`git pull`時會自動被合併的分支。
+
+### Removing and Renaming Remotes
+可以用`git remote rename`命令修改某個遠端儲存庫在本地的簡稱，舉例而言，想把 pb 改成 paul，可以執行下列指令：
+
+	$ git remote rename pb paul
+	$ git remote
+	origin
+	paul
+	
+若你想要移除某個 remote repository，則可以使用`git remote rm`：
+
+	$ git remote rm paul
+	$ git remote
+	origin
+
+## Tag
+Git具備在特定時間點加入標籤去註明其重要性的功能。
+
