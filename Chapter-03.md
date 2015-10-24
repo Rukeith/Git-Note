@@ -128,3 +128,48 @@ Git 使用了`(remote)/(branch)`的格式來表示 Remote branch。
 但刪除之後 Git 還是會保留資料一段時間，直到 garbage collection 執行。所以如果不小心誤刪的話還是可以馬上回覆的。
 
 ## Rebase
+在 Git 中有兩種主要合併分支的方式：`merge`和`rebase`。
+
+* `Merge`：
+它會把兩個分支最新的快照（C3 和 C4）以及二者最新的共同祖先（C2）進行三方合併，合併的結果是產生一個新的提交物件（C5）。
+![Basic Merge](basic-merge.png)
+
+* `Rebase`：
+會把 C3 裡的變化在 C4 的基礎上重新寫入。這樣就可以把在一個分支裡提交的改變移到另一個分支裡重放一遍。  
+
+		$ git checkout experiment
+		$ git rebase master
+		First, rewinding head to replay your work on top of it...
+		Applying: added staged command
+
+![Basic Rebase](basic-rebase.png)
+
+雖然 rebase 和 merge 最後產生出來的會是一模一樣的結果，但是 rebase 可以產生一個非常乾淨的 commit 歷史記錄。所有的紀錄都會在一條分支上。
+`rebase`是按照每行的修改次序重演一遍修改，而`merge`是把最終結果合在一起。
+
+### more usage
+rebase 可以與其他不是基底分支來進行。例如在 master 分支創建了 server 分支並 commit 了 C3 和 C4。然後又從 C3 的地方創建 client 分支並 commit 了 C8 和 C9。最後回到 server 並 commit 了 C10。
+而我們可以直接將 client rebase 到 master
+
+![interesting-rebase](interesting-rebase.png)
+
+但是這樣將會需要用到`git rebase`的`--onto`指定新的基底分支`master`
+
+	$ git rebase --onto master server client
+	
+>取出`client`分支，找出`clinet`和`server`的共同祖先之後的變化，並在`master`重新寫入。雖然在 C3 有重疊，但是只會放入 C8 和 C9 的變化。
+
+`git rebase [主分支] [特性分支]`
+
+### Rebase 的風險
+Rebase 在操作上也有一些限制，**"Do not rebase commits that exist outside your repository."**
+
+意指當有人已經在 commit 的資料上開發的話，就不適合用 rebase 的操作。
+[see more](https://git-scm.com/book/zh-tw/v1/Git-%E5%88%86%E6%94%AF-%E5%88%86%E6%94%AF%E7%9A%84%E8%A1%8D%E5%90%88)
+
+但是 Git 可以幫助你解決類似的問題，可以使用`git rebase <remote/branch>`。除了在 commit 時 Git 會有 SHA-1 的驗證外，Git 也計算這些 patch 的校正，叫做 "patch-id"。當在 pull 被共同編輯者覆蓋或 rebase 的資料時，Git 會辨別出哪些是你分支上的變化和還沒 merge 的 commit 還有在目標分支上被覆蓋的 commit。
+![perils-of-rebasing](perils-of-rebasing-5.png)
+
+這個操作只有在 C4 和 C4' 產生幾乎一樣的 patch。也可以使用`git pull --rebase`取代一般的`git pull`。或是使用`git fetch`後接著用`git rebase <remote/branch>`。
+
+如果想要在每次用`git pull`時都自動加上`--rebase`，可以設定在設定檔裡`git config --global pull.rebase true`。
